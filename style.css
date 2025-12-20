@@ -1,0 +1,14 @@
+body {
+    text-align: center;
+    font-family: Arial, sans-serif;
+    background-color: #87ceeb; /* sky blue */
+    margin: 0;
+    padding: 0;
+}
+
+canvas {
+    border: 3px solid #000;
+    background-color: #00c800; /* grass */
+    display: block;
+    margin: 0 auto;
+}
