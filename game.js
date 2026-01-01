@@ -1,4 +1,4 @@
-// -------------------- SETUP --------------------
+// ================= SETUP =================
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -8,183 +8,163 @@ const HEIGHT = canvas.height;
 let score = 0;
 document.getElementById("score").textContent = score;
 
-// -------------------- SNAKE --------------------
+let gameOver = false;
+
+// ================= SNAKE =================
 const snake = {
     x: 100,
     y: 300,
-    width: 40,
-    height: 20,
-    yVelocity: 0,
+    w: 40,
+    h: 20,
+    yVel: 0,
     gravity: 1,
     jumpPower: -15
 };
 
 let onGround = false;
-let gameOver = false;
 
-// -------------------- SPEED (GOD MODE SCALE) --------------------
-let gameSpeed = 5;
+// ================= SPEED =================
+let speed = 5;
+const MAX_SPEED = 14;
 
-// -------------------- WALLS --------------------
+function updateSpeed() {
+    if (score >= 10 ()){
+        speed = Math.min(5 + Math.floor((score - 10) / 3), MAX_SPEED);
+    }
+}
+
+// ================= WALLS =================
 let walls = [];
 
 function createWall() {
-    const height = Math.floor(Math.random() * 50) + 40;
-    return {
-        x: WIDTH + Math.random() * 200,
-        y: 350 - height,
-        width: 30,
-        height: height
-    };
+    const h = Math.random() * 40 + 40;
+    return { x: WIDTH + 100, y: 350 - h, w: 30, h };
 }
 
 walls.push(createWall());
 
-// -------------------- SPIKES --------------------
+// ================= SPIKES =================
 let spikes = [];
 
-function createSpike(double = false) {
-    const baseX = WIDTH + Math.random() * 200;
-
-    const spike1 = {
-        x: baseX,
-        y: 350,
-        size: 30
+function createSpike() {
+    return {
+        x: WIDTH + 100,
+        size: 30,
+        count: Math.random() < 0.5 ? 2 : 1
     };
-
-    if (double) {
-        const spike2 = {
-            x: baseX + 35,
-            y: 350,
-            size: 30
-        };
-        return [spike1, spike2];
-    }
-
-    return [spike1];
 }
 
-// -------------------- JUMP FUNCTION --------------------
+// ================= JUMP =================
 function jump() {
     if (onGround && !gameOver) {
-        snake.yVelocity = snake.jumpPower;
+        snake.yVel = snake.jumpPower;
     }
 }
 
-// PC JUMP
+// KEYBOARD
 document.addEventListener("keydown", e => {
-    if (e.code === "Space") {
-        jump();
-    }
+    if (e.code === "Space") jump();
 });
 
-// MOBILE JUMP
+// MOBILE BUTTON (FIXED)
 const jumpBtn = document.getElementById("jumpBtn");
-if (jumpBtn) {
-    jumpBtn.addEventListener("touchstart", e => {
-        e.preventDefault();
-        jump();
-    });
-}
 
-// -------------------- GAME LOOP --------------------
-function gameLoop() {
+jumpBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    jump();
+}, { passive: false });
+
+jumpBtn.addEventListener("click", e => {
+    e.preventDefault();
+    jump();
+});
+
+// ================= GAME LOOP =================
+function loop() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
     if (gameOver) {
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = "black";
         ctx.font = "36px Arial";
-        ctx.fillText("GAME OVER - Refresh", 220, 200);
+        ctx.fillText("GAME OVER - Refresh", 200, 200);
         return;
     }
 
-    // -------------------- SPEED INCREASE --------------------
-    if (score >= 10) {
-        gameSpeed = 5 + (score - 10) * 0.3;
-    }
+    // Physics
+    snake.yVel += snake.gravity;
+    snake.y += snake.yVel;
 
-    // -------------------- GRAVITY --------------------
-    snake.yVelocity += snake.gravity;
-    snake.y += snake.yVelocity;
-
-    // GROUND
-    if (snake.y + snake.height >= 350) {
-        snake.y = 350 - snake.height;
-        snake.yVelocity = 0;
+    if (snake.y + snake.h >= 350) {
+        snake.y = 350 - snake.h;
+        snake.yVel = 0;
         onGround = true;
     } else {
         onGround = false;
     }
 
-    // MOVE WALLS & SPIKES
-    walls.forEach(w => w.x -= gameSpeed);
-    spikes.forEach(s => s.x -= gameSpeed);
+    // Move
+    walls.forEach(w => w.x -= speed);
+    spikes.forEach(s => s.x -= speed);
 
-    // -------------------- COLLISIONS --------------------
-    for (let w of walls) {
+    // Collisions
+    walls.forEach(w => {
         if (
-            snake.x < w.x + w.width &&
-            snake.x + snake.width > w.x &&
-            snake.y < w.y + w.height &&
-            snake.y + snake.height > w.y
-        ) {
-            gameOver = true;
-        }
-    }
+            snake.x < w.x + w.w &&
+            snake.x + snake.w > w.x &&
+            snake.y < w.y + w.h &&
+            snake.y + snake.h > w.y
+        ) gameOver = true;
+    });
 
-    for (let s of spikes) {
+    spikes.forEach(s => {
         if (
-            snake.x + snake.width > s.x &&
-            snake.x < s.x + s.size &&
-            snake.y + snake.height > s.y - s.size
-        ) {
-            gameOver = true;
-        }
-    }
+            snake.x + snake.w > s.x &&
+            snake.x < s.x + s.size * s.count &&
+            snake.y + snake.h > 350 - s.size
+        ) gameOver = true;
+    });
 
-    // -------------------- CLEAN --------------------
-    walls = walls.filter(w => w.x + w.width > 0);
-    spikes = spikes.filter(s => s.x + s.size > 0);
+    // Cleanup
+    walls = walls.filter(w => w.x + w.w > 0);
+    spikes = spikes.filter(s => s.x + s.size * s.count > 0);
 
-    // -------------------- SPAWN WALLS --------------------
-    if (walls.length === 0 || walls[walls.length - 1].x < WIDTH - 500) {
+    // Spawn
+    if (walls.length === 0 || walls[walls.length - 1].x < WIDTH - 300) {
         walls.push(createWall());
         score++;
         document.getElementById("score").textContent = score;
-
-        // SPIKES START AT SCORE 10
-        if (score >= 10) {
-            const doubleSpike = Math.random() < 0.5;
-            createSpike(doubleSpike).forEach(s => spikes.push(s));
-        }
+        updateSpeed();
+        if (score >= 10) spikes.push(createSpike());
     }
 
-    // -------------------- DRAW --------------------
-    // Ground
+    // Draw
     ctx.fillStyle = "#00c800";
     ctx.fillRect(0, 350, WIDTH, 50);
 
-    // Walls
     ctx.fillStyle = "#8b4513";
-    walls.forEach(w => ctx.fillRect(w.x, w.y, w.width, w.height));
+    walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
 
-    // Spikes (triangle like image)
-    ctx.fillStyle = "#555";
+    ctx.fillStyle = "black";
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 3;
+
     spikes.forEach(s => {
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(s.x + s.size / 2, s.y - s.size);
-        ctx.lineTo(s.x + s.size, s.y);
-        ctx.closePath();
-        ctx.fill();
+        for (let i = 0; i < s.count; i++) {
+            const x = s.x + i * s.size;
+            ctx.beginPath();
+            ctx.moveTo(x, 350);
+            ctx.lineTo(x + s.size / 2, 350 - s.size);
+            ctx.lineTo(x + s.size, 350);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
     });
 
-    // Snake
-    ctx.fillStyle = "#ff0000";
-    ctx.fillRect(snake.x, snake.y, snake.width, snake.height);
+    ctx.fillStyle = "red";
+    ctx.fillRect(snake.x, snake.y, snake.w, snake.h);
 
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
 }
 
-gameLoop();
-
+loop();
