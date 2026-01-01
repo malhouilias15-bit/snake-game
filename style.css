@@ -2,6 +2,8 @@ body {
     text-align: center;
     font-family: Arial, sans-serif;
     background: #eaeaea;
+    margin: 0;
+    padding: 0;
 }
 
 canvas {
@@ -11,25 +13,31 @@ canvas {
     margin: auto;
 }
 
-/* Mobile Jump Button */
+/* MOBILE JUMP BUTTON */
 #jumpBtn {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 80px;
-    height: 80px;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
-    font-size: 36px;
-    background: black;
-    color: white;
-    border: 3px solid white;
+    background: transparent;
+    border: none;
+    padding: 0;
     display: none;
-    z-index: 10;
+    z-index: 9999;
 }
 
-/* Show jump button only on mobile */
+#jumpBtn img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+/* SHOW ONLY ON MOBILE */
 @media (max-width: 768px) {
     #jumpBtn {
         display: block;
     }
 }
+
