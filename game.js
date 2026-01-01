@@ -1,4 +1,4 @@
-// ==================== SETUP ====================
+// ================= SETUP =================
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -10,139 +10,138 @@ document.getElementById("score").textContent = score;
 
 let gameOver = false;
 
-// ==================== SNAKE ====================
+// ================= SNAKE =================
 const snake = {
     x: 100,
     y: 300,
-    width: 40,
-    height: 20,
+    w: 40,
+    h: 20,
     yVel: 0,
     gravity: 1,
-    jump: -15
+    jumpPower: -15
 };
 
 let onGround = false;
 
-// ==================== WALLS ====================
+// ================= WALLS =================
 let walls = [];
 const SPEED = 5;
 
 function createWall() {
-    const h = Math.floor(Math.random() * 40) + 40;
+    const h = Math.random() * 40 + 40;
     return {
-        x: WIDTH + 50,
+        x: WIDTH + 100,
         y: 350 - h,
-        width: 30,
-        height: h
+        w: 30,
+        h: h
     };
 }
 
 walls.push(createWall());
 
-// ==================== SPIKES ====================
+// ================= SPIKES =================
 let spikes = [];
 
 function createSpike() {
-    const isDouble = Math.random() < 0.5; // 50% chance
     return {
-        x: WIDTH + 50,
-        size: 20,
-        count: isDouble ? 2 : 1
+        x: WIDTH + 100,
+        size: 30,
+        count: Math.random() < 0.5 ? 2 : 1 // 50% double spike
     };
 }
 
-// ==================== INPUT ====================
-document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && onGround && !gameOver) {
-        snake.yVel = snake.jump;
+// ================= JUMP =================
+function jump() {
+    if (onGround && !gameOver) {
+        snake.yVel = snake.jumpPower;
     }
+}
+
+// Keyboard
+document.addEventListener("keydown", e => {
+    if (e.code === "Space") jump();
 });
 
-// ==================== GAME LOOP ====================
-function gameLoop() {
+// Mobile button
+document.getElementById("jumpBtn").addEventListener("touchstart", e => {
+    e.preventDefault();
+    jump();
+});
+
+// ================= GAME LOOP =================
+function loop() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
     if (gameOver) {
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = "black";
         ctx.font = "36px Arial";
         ctx.fillText("GAME OVER - Refresh", 200, 200);
         return;
     }
 
-    // ----- PHYSICS -----
+    // Gravity
     snake.yVel += snake.gravity;
     snake.y += snake.yVel;
 
-    if (snake.y + snake.height >= 350) {
-        snake.y = 350 - snake.height;
+    if (snake.y + snake.h >= 350) {
+        snake.y = 350 - snake.h;
         snake.yVel = 0;
         onGround = true;
     } else {
         onGround = false;
     }
 
-    // ----- MOVE OBJECTS -----
+    // Move obstacles
     walls.forEach(w => w.x -= SPEED);
     spikes.forEach(s => s.x -= SPEED);
 
-    // ----- WALL COLLISION -----
-    for (let w of walls) {
+    // Wall collision
+    walls.forEach(w => {
         if (
-            snake.x < w.x + w.width &&
-            snake.x + snake.width > w.x &&
-            snake.y < w.y + w.height &&
-            snake.y + snake.height > w.y
-        ) {
-            gameOver = true;
-        }
-    }
+            snake.x < w.x + w.w &&
+            snake.x + snake.w > w.x &&
+            snake.y < w.y + w.h &&
+            snake.y + snake.h > w.y
+        ) gameOver = true;
+    });
 
-    // ----- SPIKE COLLISION -----
-    for (let s of spikes) {
-        const spikeWidth = s.count * s.size;
-        const spikeHeight = s.size;
-
+    // Spike collision
+    spikes.forEach(s => {
+        const totalWidth = s.size * s.count;
         if (
-            snake.x + snake.width > s.x &&
-            snake.x < s.x + spikeWidth &&
-            snake.y + snake.height > 350 - spikeHeight
-        ) {
-            gameOver = true;
-        }
-    }
+            snake.x + snake.w > s.x &&
+            snake.x < s.x + totalWidth &&
+            snake.y + snake.h > 350 - s.size
+        ) gameOver = true;
+    });
 
-    // ----- CLEANUP -----
-    walls = walls.filter(w => w.x + w.width > 0);
+    // Clean up
+    walls = walls.filter(w => w.x + w.w > 0);
     spikes = spikes.filter(s => s.x + s.size * s.count > 0);
 
-    // ----- SPAWN WALLS -----
+    // Spawn
     if (walls.length === 0 || walls[walls.length - 1].x < WIDTH - 300) {
         walls.push(createWall());
         score++;
         document.getElementById("score").textContent = score;
 
-        // Spawn spike separately AFTER score 10
-        if (score >= 10 && Math.random() < 0.7) {
+        if (score >= 10) {
             spikes.push(createSpike());
         }
     }
 
-    // ==================== DRAW ====================
-
-    // Ground
+    // Draw ground
     ctx.fillStyle = "#00c800";
     ctx.fillRect(0, 350, WIDTH, 50);
 
-    // Walls
+    // Draw walls
     ctx.fillStyle = "#8b4513";
-    walls.forEach(w => ctx.fillRect(w.x, w.y, w.width, w.height));
+    walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
 
-    // Spikes (triangle style)
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "white";
-    ctx.shadowColor = "white";
-    ctx.shadowBlur = 10;
+    // Draw spikes (logo-style)
     ctx.fillStyle = "black";
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 3;
 
     spikes.forEach(s => {
         for (let i = 0; i < s.count; i++) {
@@ -159,13 +158,11 @@ function gameLoop() {
         }
     });
 
-    ctx.shadowBlur = 0;
+    // Draw snake
+    ctx.fillStyle = "red";
+    ctx.fillRect(snake.x, snake.y, snake.w, snake.h);
 
-    // Snake
-    ctx.fillStyle = "#ff0000";
-    ctx.fillRect(snake.x, snake.y, snake.width, snake.height);
-
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
 }
 
-gameLoop();
+loop();
