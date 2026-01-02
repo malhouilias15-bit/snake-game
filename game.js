@@ -1,72 +1,66 @@
-// ================= CANVAS =================
+// ================== CANVAS ==================
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
-const GROUND_Y = 320;
 
-// ================= SCORE =================
+// ================== GAME STATE ==================
 let score = 0;
+let gameOver = false;
+let speed = 5;
+
 const scoreEl = document.getElementById("score");
 
-// ================= SNAKE IMAGE =================
-const snakeImg = new Image();
-snakeImg.src = "snake.png";
-let snakeLoaded = false;
-
-snakeImg.onload = () => {
-    snakeLoaded = true;
-};
-
-// ================= SNAKE =================
+// ================== SNAKE ==================
 const snake = {
     x: 100,
-    y: GROUND_Y - 50,
+    y: 300,
     w: 50,
     h: 50,
-    vy: 0
+    velY: 0,
+    gravity: 1,
+    jump: -16
 };
 
-const GRAVITY = 0.8;
-const JUMP_FORCE = -14;
-let onGround = true;
-let gameOver = false;
+let onGround = false;
 
-// ================= SPEED =================
-let speed = 4;
+// ================== SNAKE IMAGE ==================
+const snakeImg = new Image();
+snakeImg.src = "snake.png"; // MUST be in same folder
 
-// ================= WALLS =================
+let snakeImgLoaded = false;
+snakeImg.onload = () => snakeImgLoaded = true;
+
+// ================== WALLS ==================
 let walls = [];
 
 function spawnWall() {
-    const h = 40 + Math.random() * 60;
-    walls.push({
-        x: WIDTH + 200, // spawn farther → FIX instant death
-        y: GROUND_Y - h,
-        w: 30,
-        h
-    });
+    return {
+        type: "wall",
+        x: WIDTH + 50,
+        w: 40,
+        h: 80 + Math.random() * 60
+    };
 }
 
-// ================= SPIKES =================
+// ================== SPIKES ==================
 let spikes = [];
 
-function spawnSpikes() {
-    const baseX = WIDTH + 200;
-    const doubleSpike = Math.random() < 0.5;
-
-    spikes.push({ x: baseX, size: 25 });
-    if (doubleSpike) {
-        spikes.push({ x: baseX + 28, size: 25 });
-    }
+function spawnSpike(double = false) {
+    const baseX = WIDTH + 50;
+    return double ? [
+        { type: "spike", x: baseX, size: 30 },
+        { type: "spike", x: baseX + 35, size: 30 }
+    ] : [
+        { type: "spike", x: baseX, size: 30 }
+    ];
 }
 
-// ================= INPUT =================
+// ================== INPUT ==================
 function jump() {
     if (onGround && !gameOver) {
-        snake.vy = JUMP_FORCE;
-        onGround = false;
+        snake.velY = snake.jump;
     }
 }
 
@@ -74,117 +68,122 @@ document.addEventListener("keydown", e => {
     if (e.code === "Space") jump();
 });
 
-const jumpBtn = document.getElementById("jumpBtn");
-if (jumpBtn) {
-    jumpBtn.addEventListener("touchstart", e => {
-        e.preventDefault();
-        jump();
-    });
-    jumpBtn.addEventListener("click", jump);
-}
+canvas.addEventListener("mousedown", jump);
+canvas.addEventListener("touchstart", e => {
+    e.preventDefault();
+    jump();
+});
 
-// ================= GAME LOOP =================
+// ================== GAME LOOP ==================
 function loop() {
-    if (!snakeLoaded) {
-        ctx.fillStyle = "black";
-        ctx.font = "20px Arial";
-        ctx.fillText("Loading...", WIDTH / 2 - 50, HEIGHT / 2);
-        requestAnimationFrame(loop);
-        return;
-    }
-
-    if (gameOver) {
-        ctx.fillStyle = "black";
-        ctx.font = "30px Arial";
-        ctx.fillText("GAME OVER", WIDTH / 2 - 90, HEIGHT / 2);
-        return;
-    }
-
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-    // Speed scaling
+    if (gameOver) {
+        ctx.fillStyle = "#000";
+        ctx.font = "40px Arial";
+        ctx.fillText("GAME OVER", WIDTH / 2 - 120, HEIGHT / 2);
+        return;
+    }
+
+    // SPEED SCALE (GOD MODE)
     if (score >= 10) {
-        speed = 4 + (score - 10) * 0.2;
+        speed = 5 + (score - 9) * 0.4;
     }
 
-    // Gravity
-    snake.vy += GRAVITY;
-    snake.y += snake.vy;
+    // ================== PHYSICS ==================
+    snake.velY += snake.gravity;
+    snake.y += snake.velY;
 
-    if (snake.y + snake.h >= GROUND_Y) {
-        snake.y = GROUND_Y - snake.h;
-        snake.vy = 0;
+    if (snake.y + snake.h >= 350) {
+        snake.y = 350 - snake.h;
+        snake.velY = 0;
         onGround = true;
-    }
-
-    // Move
-    walls.forEach(w => w.x -= speed);
-    spikes.forEach(s => s.x -= speed);
-
-    // Collisions
-    if (score < 10) {
-        for (let w of walls) {
-            if (
-                snake.x < w.x + w.w &&
-                snake.x + snake.w > w.x &&
-                snake.y < w.y + w.h &&
-                snake.y + snake.h > w.y
-            ) gameOver = true;
-        }
     } else {
-        for (let s of spikes) {
-            if (
-                snake.x + snake.w > s.x &&
-                snake.x < s.x + s.size &&
-                snake.y + snake.h > GROUND_Y - s.size
-            ) gameOver = true;
+        onGround = false;
+    }
+
+    // ================== SPAWN LOGIC ==================
+    if (walls.length === 0 && spikes.length === 0) {
+        if (score >= 10 && Math.random() < 0.5) {
+            spikes.push(...spawnSpike(Math.random() < 0.5));
+        } else {
+            walls.push(spawnWall());
         }
     }
 
-    // Cleanup
+    // ================== UPDATE WALLS ==================
+    walls.forEach(w => w.x -= speed);
     walls = walls.filter(w => w.x + w.w > 0);
+
+    // ================== UPDATE SPIKES ==================
+    spikes.forEach(s => s.x -= speed);
     spikes = spikes.filter(s => s.x + s.size > 0);
 
-    // Spawn
-    if (score < 10) {
-        spikes = [];
-        if (walls.length === 0 || walls[walls.length - 1].x < WIDTH - 500) {
-            spawnWall();
-            score++;
-        }
-    } else {
-        walls = [];
-        if (spikes.length === 0 || spikes[spikes.length - 1].x < WIDTH - 400) {
-            spawnSpikes();
-            score++;
+    // ================== COLLISIONS ==================
+    for (let w of walls) {
+        const wy = 350 - w.h;
+        if (
+            snake.x < w.x + w.w &&
+            snake.x + snake.w > w.x &&
+            snake.y < wy + w.h &&
+            snake.y + snake.h > wy
+        ) {
+            gameOver = true;
         }
     }
 
-    scoreEl.textContent = score;
+    for (let s of spikes) {
+        if (
+            snake.x + snake.w > s.x &&
+            snake.x < s.x + s.size &&
+            snake.y + snake.h > 350 - s.size
+        ) {
+            gameOver = true;
+        }
+    }
 
-    // Draw ground
+    // ================== SCORE ==================
+    if (walls.length === 0 && spikes.length === 0) {
+        score++;
+        scoreEl.textContent = score;
+    }
+
+    // ================== DRAW ==================
+
+    // Sky
+    ctx.fillStyle = "#87CEEB";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    // Ground
     ctx.fillStyle = "#00c800";
-    ctx.fillRect(0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y);
+    ctx.fillRect(0, 350, WIDTH, 50);
 
-    // Draw walls
+    // Walls
     ctx.fillStyle = "#8b4513";
-    walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
+    walls.forEach(w => {
+        ctx.fillRect(w.x, 350 - w.h, w.w, w.h);
+    });
 
-    // Draw spikes
-    ctx.fillStyle = "#555";
+    // Spikes
+    ctx.fillStyle = "#000";
     spikes.forEach(s => {
         ctx.beginPath();
-        ctx.moveTo(s.x, GROUND_Y);
-        ctx.lineTo(s.x + s.size / 2, GROUND_Y - s.size);
-        ctx.lineTo(s.x + s.size, GROUND_Y);
+        ctx.moveTo(s.x, 350);
+        ctx.lineTo(s.x + s.size / 2, 350 - s.size);
+        ctx.lineTo(s.x + s.size, 350);
+        ctx.closePath();
         ctx.fill();
     });
 
-    // Draw snake IMAGE
-    ctx.drawImage(snakeImg, snake.x, snake.y, snake.w, snake.h);
+    // Snake
+    if (snakeImgLoaded) {
+        ctx.drawImage(snakeImg, snake.x, snake.y, snake.w, snake.h);
+    } else {
+        ctx.fillStyle = "red"; // fallback
+        ctx.fillRect(snake.x, snake.y, snake.w, snake.h);
+    }
 
     requestAnimationFrame(loop);
 }
 
 loop();
-
