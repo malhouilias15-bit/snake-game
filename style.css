@@ -1,35 +1,42 @@
 body {
     text-align: center;
     font-family: Arial, sans-serif;
-    background: #eaeaea;
+    background: #f2f2f2;
+    margin: 0;
+}
+
+h1 {
+    margin-top: 10px;
+}
+
+#game-container {
+    position: relative;
+    display: inline-block;
 }
 
 canvas {
     background: #87ceeb;
-    border: 2px solid #000;
+    border: 3px solid #000;
 }
 
-/* JUMP BUTTON */
+/* MOBILE JUMP BUTTON */
 #jumpBtn {
-    display: none;
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 20px 30px;
-    font-size: 22px;
-    background: red;
-    color: white;
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    padding: 18px 25px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 12px;
     border: none;
-    border-radius: 50%;
-    z-index: 999;
+    background: orange;
+    color: black;
+    display: none;
 }
 
-/* SHOW ONLY ON MOBILE */
-@media (max-width: 768px) {
+/* Show button only on touch devices */
+@media (pointer: coarse) {
     #jumpBtn {
         display: block;
     }
 }
-
-        
-    
