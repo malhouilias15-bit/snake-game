@@ -10,7 +10,7 @@ let musicStarted = false;
 
 function startMusic() {
     if (!musicStarted) {
-        music.volume = 0.5;
+        music.volume = 30;
         music.play().catch(() => {});
         musicStarted = true;
     }
@@ -55,6 +55,8 @@ function spawnSpike() {
     obstacles.push({
         type: "spike",
         x: canvas.width,
+        width: 30,
+        height: 30
         size: 30
     });
 
