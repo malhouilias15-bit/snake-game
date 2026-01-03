@@ -43,8 +43,8 @@ function spawnWall() {
     obstacles.push({
         type: "wall",
         x: canvas.width,
-        width: 40,
-        height: 120
+        width: 30,
+        height: 80
     });
 }
 
