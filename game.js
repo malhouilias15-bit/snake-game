@@ -14,7 +14,7 @@ const scoreEl = document.getElementById("score");
 const snake = {
     x: 120,
     y: GROUND_Y - 20,
-    r: 18,
+    r: 18,          // radius (BIG DOT)
     vy: 0
 };
 
@@ -30,14 +30,14 @@ let speed = 5;
 let obstacles = [];
 let spawnTimer = 0;
 
-// SMALLER WALL (UPDATED)
+// WALL
 function createWall() {
     return {
         type: "wall",
         x: WIDTH,
-        w: 24,      // was 30
-        h: 50,      // was 60
-        y: GROUND_Y - 50
+        w: 30,
+        h: 60,
+        y: GROUND_Y - 60
     };
 }
 
@@ -85,6 +85,7 @@ function gameLoop() {
         return;
     }
 
+    // SPEED INCREASE
     if (score >= 10) {
         speed = 5 + Math.floor(score / 5);
     }
@@ -93,7 +94,7 @@ function gameLoop() {
     snake.vy += GRAVITY;
     snake.y += snake.vy;
 
-    // GROUND COLLISION
+    // GROUND
     if (snake.y + snake.r >= GROUND_Y) {
         snake.y = GROUND_Y - snake.r;
         snake.vy = 0;
@@ -104,7 +105,7 @@ function gameLoop() {
     obstacles.forEach(o => o.x -= speed);
     obstacles = obstacles.filter(o => o.x + 60 > 0);
 
-    // SPAWN
+    // SPAWN LOGIC (FIXED – NO EMPTY SCREEN)
     spawnTimer++;
     if (spawnTimer > 90) {
         spawnTimer = 0;
@@ -119,7 +120,7 @@ function gameLoop() {
         scoreEl.textContent = score;
     }
 
-    // COLLISION
+    // COLLISION CHECK
     obstacles.forEach(o => {
         if (o.type === "wall") {
             if (
@@ -153,7 +154,7 @@ function gameLoop() {
     ctx.fillStyle = "#00c800";
     ctx.fillRect(0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y);
 
-    // Snake
+    // Snake (GREEN DOT)
     ctx.fillStyle = "#2ecc71";
     ctx.beginPath();
     ctx.arc(snake.x, snake.y, snake.r, 0, Math.PI * 2);
