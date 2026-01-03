@@ -10,16 +10,11 @@ const GROUND_Y = 330;
 let score = 0;
 const scoreEl = document.getElementById("score");
 
-// ---------------- SNAKE IMAGE ----------------
-const snakeImg = new Image();
-snakeImg.src = "snake.png"; // MUST be in same folder
-
-// ---------------- SNAKE ----------------
+// ---------------- SNAKE (BIG GREEN DOT) ----------------
 const snake = {
-    x: 100,
-    y: GROUND_Y - 24,
-    w: 32,
-    h: 24,
+    x: 120,
+    y: GROUND_Y - 20,
+    r: 18,
     vy: 0
 };
 
@@ -32,22 +27,24 @@ let gameOver = false;
 let speed = 5;
 
 // ---------------- OBSTACLES ----------------
-let walls = [];
-let spikes = [];
+let obstacles = [];
+let spawnTimer = 0;
 
-// WALL
+// SMALLER WALL (UPDATED)
 function createWall() {
     return {
+        type: "wall",
         x: WIDTH,
-        w: 30,
-        h: 60,
-        y: GROUND_Y - 60
+        w: 24,      // was 30
+        h: 50,      // was 60
+        y: GROUND_Y - 50
     };
 }
 
 // SPIKE
 function createSpike(doubleSpike = false) {
     return {
+        type: "spike",
         x: WIDTH,
         size: 30,
         double: doubleSpike
@@ -69,20 +66,18 @@ document.addEventListener("keydown", e => {
 document.getElementById("jumpBtn").addEventListener("click", jump);
 
 // ---------------- COLLISION ----------------
-function hit(a, b) {
-    return (
-        a.x < b.x + b.w &&
-        a.x + a.w > b.x &&
-        a.y < b.y + b.h &&
-        a.y + a.h > b.y
-    );
+function circleRectHit(cx, cy, r, rect) {
+    const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+    const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+    const dx = cx - closestX;
+    const dy = cy - closestY;
+    return dx * dx + dy * dy < r * r;
 }
 
 // ---------------- GAME LOOP ----------------
 function gameLoop() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-    // GAME OVER
     if (gameOver) {
         ctx.fillStyle = "#000";
         ctx.font = "36px Arial";
@@ -90,7 +85,6 @@ function gameLoop() {
         return;
     }
 
-    // SPEED SCALING
     if (score >= 10) {
         speed = 5 + Math.floor(score / 5);
     }
@@ -99,49 +93,58 @@ function gameLoop() {
     snake.vy += GRAVITY;
     snake.y += snake.vy;
 
-    // GROUND
-    if (snake.y + snake.h >= GROUND_Y) {
-        snake.y = GROUND_Y - snake.h;
+    // GROUND COLLISION
+    if (snake.y + snake.r >= GROUND_Y) {
+        snake.y = GROUND_Y - snake.r;
         snake.vy = 0;
         onGround = true;
     }
 
     // MOVE OBSTACLES
-    walls.forEach(o => o.x -= speed);
-    spikes.forEach(o => o.x -= speed);
+    obstacles.forEach(o => o.x -= speed);
+    obstacles = obstacles.filter(o => o.x + 60 > 0);
 
-    // CLEAN OLD
-    walls = walls.filter(o => o.x + o.w > 0);
-    spikes = spikes.filter(o => o.x + o.size * (o.double ? 2 : 1) > 0);
+    // SPAWN
+    spawnTimer++;
+    if (spawnTimer > 90) {
+        spawnTimer = 0;
 
-    // SPAWN (WALLS OR SPIKES — NEVER BOTH)
-    if (walls.length === 0 && spikes.length === 0) {
         if (score >= 10) {
-            spikes.push(createSpike(Math.random() < 0.5));
+            obstacles.push(createSpike(Math.random() < 0.5));
         } else {
-            walls.push(createWall());
+            obstacles.push(createWall());
         }
+
         score++;
         scoreEl.textContent = score;
     }
 
-    // WALL COLLISION
-    walls.forEach(w => {
-        if (hit(snake, { x: w.x, y: w.y, w: w.w, h: w.h })) {
-            gameOver = true;
-        }
-    });
-
-    // SPIKE COLLISION
-    spikes.forEach(s => {
-        const hitbox = {
-            x: s.x,
-            y: GROUND_Y - s.size,
-            w: s.size * (s.double ? 2 : 1),
-            h: s.size
-        };
-        if (hit(snake, hitbox)) {
-            gameOver = true;
+    // COLLISION
+    obstacles.forEach(o => {
+        if (o.type === "wall") {
+            if (
+                circleRectHit(
+                    snake.x,
+                    snake.y,
+                    snake.r,
+                    { x: o.x, y: o.y, w: o.w, h: o.h }
+                )
+            ) {
+                gameOver = true;
+            }
+        } else {
+            const count = o.double ? 2 : 1;
+            for (let i = 0; i < count; i++) {
+                const rect = {
+                    x: o.x + i * o.size,
+                    y: GROUND_Y - o.size,
+                    w: o.size,
+                    h: o.size
+                };
+                if (circleRectHit(snake.x, snake.y, snake.r, rect)) {
+                    gameOver = true;
+                }
+            }
         }
     });
 
@@ -150,27 +153,29 @@ function gameLoop() {
     ctx.fillStyle = "#00c800";
     ctx.fillRect(0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y);
 
-    // Snake Image
-    ctx.drawImage(snakeImg, snake.x, snake.y, snake.w, snake.h);
+    // Snake
+    ctx.fillStyle = "#2ecc71";
+    ctx.beginPath();
+    ctx.arc(snake.x, snake.y, snake.r, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Walls
-    ctx.fillStyle = "#8b4513";
-    walls.forEach(w => {
-        ctx.fillRect(w.x, w.y, w.w, w.h);
-    });
-
-    // Spikes (triangle style)
-    ctx.fillStyle = "#000";
-    spikes.forEach(s => {
-        const count = s.double ? 2 : 1;
-        for (let i = 0; i < count; i++) {
-            const x = s.x + i * s.size;
-            ctx.beginPath();
-            ctx.moveTo(x, GROUND_Y);
-            ctx.lineTo(x + s.size / 2, GROUND_Y - s.size);
-            ctx.lineTo(x + s.size, GROUND_Y);
-            ctx.closePath();
-            ctx.fill();
+    // Obstacles
+    obstacles.forEach(o => {
+        if (o.type === "wall") {
+            ctx.fillStyle = "#8b4513";
+            ctx.fillRect(o.x, o.y, o.w, o.h);
+        } else {
+            ctx.fillStyle = "#000";
+            const count = o.double ? 2 : 1;
+            for (let i = 0; i < count; i++) {
+                const x = o.x + i * o.size;
+                ctx.beginPath();
+                ctx.moveTo(x, GROUND_Y);
+                ctx.lineTo(x + o.size / 2, GROUND_Y - o.size);
+                ctx.lineTo(x + o.size, GROUND_Y);
+                ctx.closePath();
+                ctx.fill();
+            }
         }
     });
 
@@ -178,4 +183,3 @@ function gameLoop() {
 }
 
 gameLoop();
-
